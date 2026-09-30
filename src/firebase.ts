@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import {
-  getFirestore,
+  initializeFirestore,
   doc,
   getDocFromServer,
   enableIndexedDbPersistence
@@ -13,7 +13,11 @@ import firebaseConfig from '../firebase-applet-config.json';
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 /* CRITICAL: Must pass databaseId from config for correct firestore instance */
-export const db = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId);
+export const db = initializeFirestore(
+  app,
+  { ignoreUndefinedProperties: true },
+  (firebaseConfig as any).firestoreDatabaseId
+);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();

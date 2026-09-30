@@ -123,36 +123,12 @@ export default function App() {
     const userSettings = loadLocalSettings(currentUid);
     let userBanners = loadLocalBanners(currentUid);
 
-    // If this account hasn't saved its profile yet, seamlessly inherit previously saved profile data
+    // If this account hasn't saved its profile locally yet, inherit local profile draft if available
     if (!userProfile.owner && !userProfile.address) {
       const guestProfile = loadLocalBusinessProfile();
       if (guestProfile.owner || guestProfile.logo || (guestProfile.name && guestProfile.name !== 'Buku Kas Pro')) {
         userProfile = { ...guestProfile };
         saveLocalBusinessProfile(userProfile, currentUid);
-        saveFirestoreUserProfile(currentUid, userProfile, userSettings);
-      }
-    }
-
-    // If this account has no banners yet, check previously uploaded banners or auto-set from profile photo
-    if (userBanners.length === 0) {
-      const guestBanners = loadLocalBanners();
-      if (guestBanners.length > 0) {
-        userBanners = [...guestBanners];
-        saveLocalBanners(userBanners, currentUid);
-        guestBanners.forEach((b) => saveFirestoreBanner(currentUid, b));
-      } else if (userProfile.logo) {
-        const autoBanner: Banner = {
-          id: `banner-auto-${Date.now()}`,
-          userId: currentUid,
-          imageUrl: userProfile.logo,
-          title: userProfile.name || 'Kopi Susu Jahe',
-          subtitle: userProfile.notes || 'Catat Keuangan Lebih Mudah',
-          isActive: true,
-          createdAt: Date.now(),
-        };
-        userBanners = [autoBanner];
-        saveLocalBanners(userBanners, currentUid);
-        saveFirestoreBanner(currentUid, autoBanner);
       }
     }
 
@@ -165,7 +141,7 @@ export default function App() {
     // Subscribe to Firestore collections in realtime for any authenticated account
     if (currentUid) {
       const unsubTx = subscribeUserTransactions(currentUid, (firestoreTxs) => {
-        if (firestoreTxs && firestoreTxs.length > 0) {
+        if (firestoreTxs) {
           setTransactions(firestoreTxs);
         }
       });
@@ -182,7 +158,7 @@ export default function App() {
       });
 
       const unsubBanners = subscribeUserBanners(currentUid, (firestoreBanners) => {
-        if (firestoreBanners && firestoreBanners.length > 0) {
+        if (firestoreBanners) {
           setBanners(firestoreBanners);
         }
       });
@@ -552,6 +528,7 @@ export default function App() {
         userId={currentUid || 'local_user'}
         banners={banners}
         onClose={() => setBannerModalOpen(false)}
+        onUpdateBanners={setBanners}
       />
 
       {/* WhatsApp Sender Modal (Laporan / Struk / Info Toko) */}

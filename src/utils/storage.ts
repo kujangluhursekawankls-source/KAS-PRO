@@ -198,6 +198,16 @@ export const saveBanners = saveLocalBanners;
 // FIRESTORE REALTIME ONLINE DATABASE LAYER
 // ==========================================
 
+export function cleanForFirestore<T extends Record<string, any>>(obj: T): T {
+  const cleaned: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      cleaned[key] = value;
+    }
+  }
+  return cleaned;
+}
+
 /**
  * Subscribe to realtime user transactions from Firestore
  */
@@ -207,15 +217,20 @@ export function subscribeUserTransactions(
 ) {
   const path = `users/${userId}/transactions`;
   const txRef = collection(db, 'users', userId, 'transactions');
-  const q = query(txRef, orderBy('createdAt', 'desc'));
 
   return onSnapshot(
-    q,
+    txRef,
     (snapshot) => {
       const list: Transaction[] = [];
       snapshot.forEach((d) => {
         const data = d.data() as Transaction;
         list.push({ ...data, id: d.id });
+      });
+      // Sort in-memory to prevent indexing failures and ensure 100% order accuracy
+      list.sort((a, b) => {
+        const da = `${a.date || ''} ${a.time || ''} ${a.createdAt || 0}`;
+        const db = `${b.date || ''} ${b.time || ''} ${b.createdAt || 0}`;
+        return db.localeCompare(da);
       });
       saveLocalTransactions(list, userId);
       onUpdate(list);
@@ -236,13 +251,15 @@ export async function saveFirestoreTransaction(
   const path = `users/${userId}/transactions/${transaction.id}`;
   try {
     const docRef = doc(db, 'users', userId, 'transactions', transaction.id);
-    await setDoc(docRef, {
+    const cleaned = cleanForFirestore({
       ...transaction,
       userId,
+      receiptImage: transaction.receiptImage || null,
       updatedAt: Date.now(),
     });
+    await setDoc(docRef, cleaned, { merge: true });
   } catch (error) {
-    console.warn('Firestore write warning for tx:', error);
+    console.error('Firestore write error for tx:', error);
   }
 }
 

@@ -174,27 +174,23 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
-    const amount = parseRupiahInput(amountRaw);
-    if (amount <= 0) {
-      alert('Mohon masukkan jumlah transaksi yang valid!');
-      return;
-    }
+    const amount = parseRupiahInput(amountRaw) || 0;
 
-    if (!category) {
-      alert('Mohon pilih kategori transaksi!');
-      return;
-    }
+    // Otomatis tentukan kategori bila pengguna tidak memilih
+    const finalCategory =
+      category ||
+      (txType === 'IN'
+        ? categories.find((c) => c.type === 'IN')?.name || 'Pemasukan Kas'
+        : categories.find((c) => c.type === 'OUT')?.name || 'Pengeluaran Kas');
 
-    // Check negative balance warning for Kas Keluar
-    if (
-      txType === 'OUT' &&
-      warnNegativeBalance &&
-      !showNegativeWarning &&
-      amount > currentBalance + (editingTransaction?.type === 'OUT' ? editingTransaction.amount : 0)
-    ) {
-      setShowNegativeWarning(true);
-      return;
-    }
+    const finalDate = date || getTodayDateString();
+    const finalTime = time || getCurrentTimeString();
+    const finalSource =
+      sourceOrTarget.trim() ||
+      (txType === 'IN' ? 'Kas Tunai Toko' : 'Pengeluaran Toko');
+    const finalDescription =
+      description.trim() ||
+      (txType === 'IN' ? 'Catatan Kas Masuk' : 'Catatan Kas Keluar');
 
     setIsSubmitting(true);
 
@@ -202,13 +198,13 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
       {
         transactionNumber: txNumber,
         type: txType,
-        date,
-        time,
-        category,
-        sourceOrTarget: sourceOrTarget.trim() || (txType === 'IN' ? 'Kas Tunai' : 'Pengeluaran Umum'),
+        date: finalDate,
+        time: finalTime,
+        category: finalCategory,
+        sourceOrTarget: finalSource,
         amount,
-        description: description.trim(),
-        receiptImage,
+        description: finalDescription,
+        receiptImage: receiptImage || null,
       },
       editingTransaction?.id
     );
@@ -216,7 +212,7 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
     setTimeout(() => {
       setIsSubmitting(false);
       onClose();
-    }, 200);
+    }, 150);
   };
 
   if (!isOpen) return null;
@@ -306,7 +302,6 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
                 placeholder="0"
                 className="w-full bg-transparent pl-3 pr-2 py-1 text-2xl font-extrabold text-slate-900 placeholder:text-slate-300 focus:outline-none dark:text-white tabular-nums"
                 autoFocus={!editingTransaction}
-                required
               />
             </div>
 
@@ -329,14 +324,13 @@ export const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                Tanggal *
+                Tanggal
               </label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => handleDateChange(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                required
               />
             </div>
             <div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Banner } from '../types';
-import { uploadImageToStorage, saveFirestoreBanner, deleteFirestoreBanner } from '../utils/storage';
+import { uploadImageToStorage, saveFirestoreBanner, deleteFirestoreBanner, saveLocalBanners } from '../utils/storage';
 import { useToast } from '../context/ToastContext';
 import {
   X,
@@ -21,6 +21,7 @@ interface BannerModalProps {
   banners: Banner[];
   onClose: () => void;
   onRefreshBanners?: () => void;
+  onUpdateBanners?: (banners: Banner[]) => void;
 }
 
 export const BannerModal: React.FC<BannerModalProps> = ({
@@ -29,6 +30,7 @@ export const BannerModal: React.FC<BannerModalProps> = ({
   banners,
   onClose,
   onRefreshBanners,
+  onUpdateBanners,
 }) => {
   const toast = useToast();
   const [title, setTitle] = useState('');
@@ -109,13 +111,17 @@ export const BannerModal: React.FC<BannerModalProps> = ({
         createdAt: Date.now(),
       };
 
+      const updated = [newBanner, ...banners];
+      saveLocalBanners(updated, userId);
+      if (onUpdateBanners) onUpdateBanners(updated);
+      if (onRefreshBanners) onRefreshBanners();
+
       await saveFirestoreBanner(userId, newBanner);
-      toast.success('Banner baru berhasil diunggah dan disimpan ke Firebase!', 'Banner Ditambahkan');
+      toast.success('Banner baru berhasil diunggah dan langsung aktif!', 'Banner Ditambahkan');
       setTitle('');
       setSubtitle('');
       setLinkUrl('');
       setPreviewImage(null);
-      if (onRefreshBanners) onRefreshBanners();
     } catch (err: any) {
       console.error(err);
       toast.error('Gagal menyimpan banner: ' + err.message);
@@ -128,9 +134,13 @@ export const BannerModal: React.FC<BannerModalProps> = ({
     if (!window.confirm('Yakin ingin menghapus banner ini?')) return;
     setIsDeletingId(bannerId);
     try {
+      const updated = banners.filter((b) => b.id !== bannerId);
+      saveLocalBanners(updated, userId);
+      if (onUpdateBanners) onUpdateBanners(updated);
+      if (onRefreshBanners) onRefreshBanners();
+
       await deleteFirestoreBanner(userId, bannerId);
       toast.success('Banner berhasil dihapus.');
-      if (onRefreshBanners) onRefreshBanners();
     } catch (err: any) {
       console.error(err);
       toast.error('Gagal menghapus banner.');

@@ -6,19 +6,16 @@ service cloud.firestore {
       return id is string && id.size() <= 128;
     }
 
+    // Registered user accounts directory for multi-browser & multi-device sync
+    match /accounts/{accountId} {
+      allow read, write: if isValidId(accountId);
+    }
+
     // User document and nested sub-collections
     match /users/{userId} {
       allow read, write: if isValidId(userId);
 
-      match /transactions/{transactionId} {
-        allow read, write: if isValidId(userId);
-      }
-
-      match /categories/{categoryId} {
-        allow read, write: if isValidId(userId);
-      }
-
-      match /banners/{bannerId} {
+      match /{allSubcollections=**} {
         allow read, write: if isValidId(userId);
       }
     }

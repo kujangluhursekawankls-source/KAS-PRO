@@ -12,7 +12,8 @@ import {
   RecaptchaVerifier,
   ConfirmationResult,
 } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, googleProvider, db } from '../firebase';
 import { AuthUser } from '../types';
 
 const LOCAL_AUTH_STORAGE_KEY = 'bukukas_local_auth_user';
@@ -24,6 +25,12 @@ export interface StoredAccount {
   displayName: string;
   passwordHash: string;
   createdAt: number;
+}
+
+// Generate an identical deterministic UID across all browsers and devices for the same user identifier
+export function generateDeterministicUid(identifier: string): string {
+  const clean = identifier.trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+  return `usr_${clean}`;
 }
 
 // Simple deterministic hash for password checking
@@ -102,24 +109,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const registerAccount = async (name: string, email: string, pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = name.trim() || cleanEmail.split('@')[0];
-    const db = getAccountsDb();
+    const cleanKey = cleanEmail.replace(/[^a-z0-9]/g, '_');
+    const uid = generateDeterministicUid(cleanEmail);
 
-    // Check if account already registered on this device
-    const existing = db.find((a) => a.email === cleanEmail);
-    if (existing) {
-      throw new Error('Alamat email ini sudah terdaftar. Silakan beralih ke tab Masuk.');
-    }
-
-    // Try Firebase in background (if enabled)
+    // Save to Firestore cloud accounts directory for cross-browser sync
     try {
-      await createUserWithEmailAndPassword(auth, cleanEmail, pass);
-    } catch (fbErr: any) {
-      // Expected if Firebase Console disabled providers; fallback seamlessly
-      console.info('Firebase registration skipped (running high-speed local-first engine):', fbErr.code);
+      await setDoc(
+        doc(db, 'accounts', cleanKey),
+        {
+          uid,
+          email: cleanEmail,
+          displayName: cleanName,
+          passwordHash: simpleHash(pass),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        { merge: true }
+      );
+    } catch (fsErr) {
+      console.warn('Firestore cloud account register warning:', fsErr);
     }
 
-    // Generate unique account UID
-    const uid = 'usr_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
+    // Save to local cache on this device
+    const dbAccounts = getAccountsDb();
     const newAccount: StoredAccount = {
       uid,
       email: cleanEmail,
@@ -127,15 +139,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       passwordHash: simpleHash(pass),
       createdAt: Date.now(),
     };
+    const existingIdx = dbAccounts.findIndex((a) => a.email === cleanEmail);
+    if (existingIdx >= 0) {
+      dbAccounts[existingIdx] = newAccount;
+    } else {
+      dbAccounts.push(newAccount);
+    }
+    saveAccountsDb(dbAccounts);
 
-    db.push(newAccount);
-    saveAccountsDb(db);
+    // Try Firebase in background
+    try {
+      await createUserWithEmailAndPassword(auth, cleanEmail, pass);
+    } catch {}
 
     // Set active user session
     const activeUser: AuthUser = {
-      uid: newAccount.uid,
-      email: newAccount.email,
-      displayName: newAccount.displayName,
+      uid,
+      email: cleanEmail,
+      displayName: cleanName,
       photoURL: null,
     };
     try {
@@ -144,62 +165,71 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLocalUser(activeUser);
   };
 
-  // Login with email and password
+  // Login with email and password (syncs seamlessly across ALL browsers and devices)
   const loginAccount = async (email: string, pass: string) => {
     const cleanEmail = email.trim().toLowerCase();
-    const db = getAccountsDb();
-    const found = db.find((a) => a.email === cleanEmail);
+    const cleanKey = cleanEmail.replace(/[^a-z0-9]/g, '_');
+    const expectedUid = generateDeterministicUid(cleanEmail);
 
-    // Try Firebase first
+    // 1. First check Firestore cloud accounts directory
+    try {
+      const snap = await getDoc(doc(db, 'accounts', cleanKey));
+      if (snap.exists()) {
+        const cloudData = snap.data();
+        if (cloudData.passwordHash && cloudData.passwordHash !== simpleHash(pass)) {
+          throw new Error('Kata sandi yang Anda masukkan salah. Silakan coba lagi.');
+        }
+        const activeUser: AuthUser = {
+          uid: cloudData.uid || expectedUid,
+          email: cloudData.email || cleanEmail,
+          displayName: cloudData.displayName || cleanEmail.split('@')[0],
+          photoURL: null,
+        };
+        try {
+          localStorage.setItem(LOCAL_AUTH_STORAGE_KEY, JSON.stringify(activeUser));
+        } catch {}
+        setLocalUser(activeUser);
+        return;
+      }
+    } catch (cloudErr: any) {
+      if (cloudErr.message && cloudErr.message.includes('Kata sandi')) {
+        throw cloudErr;
+      }
+      console.warn('Firestore cloud account lookup:', cloudErr);
+    }
+
+    // 2. Try Firebase Auth
     try {
       await signInWithEmailAndPassword(auth, cleanEmail, pass);
       return;
     } catch (fbErr: any) {
-      // If found in local accounts DB
-      if (found) {
-        if (found.passwordHash !== simpleHash(pass)) {
-          throw new Error('Kata sandi yang Anda masukkan salah. Silakan coba lagi.');
-        }
-        const activeUser: AuthUser = {
-          uid: found.uid,
-          email: found.email,
-          displayName: found.displayName,
-          photoURL: null,
-        };
-        try {
-          localStorage.setItem(LOCAL_AUTH_STORAGE_KEY, JSON.stringify(activeUser));
-        } catch {}
-        setLocalUser(activeUser);
-        return;
+      if (fbErr.code === 'auth/wrong-password') {
+        throw new Error('Kata sandi yang Anda masukkan salah. Silakan coba lagi.');
       }
-
-      // If not found in DB, create new instant access session for user
-      if (fbErr.code === 'auth/operation-not-allowed' || fbErr.code === 'auth/user-not-found' || fbErr.code === 'auth/invalid-credential') {
-        const uid = 'usr_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 6);
-        const autoAccount: StoredAccount = {
-          uid,
-          email: cleanEmail,
-          displayName: cleanEmail.split('@')[0],
-          passwordHash: simpleHash(pass),
-          createdAt: Date.now(),
-        };
-        db.push(autoAccount);
-        saveAccountsDb(db);
-        const activeUser: AuthUser = {
-          uid,
-          email: cleanEmail,
-          displayName: cleanEmail.split('@')[0],
-          photoURL: null,
-        };
-        try {
-          localStorage.setItem(LOCAL_AUTH_STORAGE_KEY, JSON.stringify(activeUser));
-        } catch {}
-        setLocalUser(activeUser);
-        return;
-      }
-
-      throw fbErr;
     }
+
+    // 3. Check local database on this device
+    const dbAccounts = getAccountsDb();
+    const found = dbAccounts.find((a) => a.email === cleanEmail);
+    if (found) {
+      if (found.passwordHash !== simpleHash(pass)) {
+        throw new Error('Kata sandi yang Anda masukkan salah. Silakan coba lagi.');
+      }
+      const activeUser: AuthUser = {
+        uid: found.uid || expectedUid,
+        email: found.email,
+        displayName: found.displayName,
+        photoURL: null,
+      };
+      try {
+        localStorage.setItem(LOCAL_AUTH_STORAGE_KEY, JSON.stringify(activeUser));
+      } catch {}
+      setLocalUser(activeUser);
+      return;
+    }
+
+    // 4. STRICT RULE: Akun yang belum terdaftar dilarang masuk
+    throw new Error('Akun belum terdaftar! Silakan klik tab "Daftar Akun Baru" terlebih dahulu.');
   };
 
   const loginWithEmail = async (email: string, pass: string) => {

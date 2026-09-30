@@ -76,127 +76,158 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Network and PWA Status Prompt */}
       <NetworkAndPwaBar onOpenApkGuide={onOpenApkGuide} />
 
-      {/* 1. Main Balance Hero Card (Banner disimpan langsung di sini sesuai permintaan) */}
-      <div className="relative overflow-hidden rounded-3xl bg-slate-950 p-5 text-white shadow-xl transition-all duration-500 min-h-[220px] flex flex-col justify-between border border-slate-800/80">
-        {/* Banner Background Image (bila ada banner aktif) */}
+      {/* 1. DEDICATED PROMINENT BANNER SECTION (Jelas, Tajam, 100% Terlihat & Responsif di Android) */}
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 transition-all">
         {activeBanner ? (
-          <>
+          <div className="relative aspect-[21/9] sm:aspect-[24/9] w-full overflow-hidden bg-slate-950 group">
+            {/* 100% Clear, full-color, sharp banner image */}
             <img
               src={activeBanner.imageUrl}
               alt={activeBanner.title}
-              className="absolute inset-0 h-full w-full object-cover transition-opacity duration-700 opacity-60 scale-100 hover:scale-105"
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
             />
-            {/* Dark gradient overlay for text readability & professional appearance */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-slate-950/70" />
-            <div className="absolute inset-0 bg-emerald-950/30 mix-blend-overlay" />
-          </>
-        ) : (
-          <>
-            {/* Default gradient when no banner uploaded yet */}
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950" />
-            <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-emerald-500/20 blur-2xl pointer-events-none" />
-            <div className="absolute -left-8 -bottom-8 h-40 w-40 rounded-full bg-teal-500/15 blur-2xl pointer-events-none" />
-          </>
-        )}
 
-        {/* Content of the Hero Card */}
-        <div className="relative z-10 flex flex-col justify-between h-full">
-          {/* Top Bar: Title, profile badge, and button to update banner in Settings */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 backdrop-blur-md shadow-xs">
-                <Wallet className="h-4.5 w-4.5 text-emerald-400" />
-              </div>
-              <div>
-                <span className="text-xs font-semibold tracking-wider uppercase text-emerald-300">
-                  SALDO SAAT INI
+            {/* Subtle bottom gradient only for title readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex flex-col justify-between p-3.5 sm:p-4 text-white">
+              {/* Top Banner Control: Title tag & edit button */}
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-md border border-white/20">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Banner Toko
                 </span>
-                {activeBanner && (
-                  <span className="block text-[10px] text-amber-300 font-bold truncate max-w-[150px] sm:max-w-[220px]">
-                    ★ {activeBanner.title}
-                  </span>
+
+                <button
+                  type="button"
+                  onClick={onOpenBannerModal}
+                  className="flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-black/80 backdrop-blur-md border border-white/20 transition active:scale-95 shadow-sm"
+                  title="Ganti atau Tambah Banner"
+                >
+                  <Camera className="w-3 h-3 text-emerald-300" />
+                  <span>Ganti Foto</span>
+                </button>
+              </div>
+
+              {/* Bottom Info: Title & Subtitle */}
+              <div>
+                <h3 className="text-xs sm:text-sm font-extrabold text-white drop-shadow-md truncate">
+                  {activeBanner.title || profile.name || 'Banner Usaha'}
+                </h3>
+                {activeBanner.subtitle && (
+                  <p className="text-[10px] sm:text-xs text-slate-200 drop-shadow line-clamp-1 mt-0.5">
+                    {activeBanner.subtitle}
+                  </p>
+                )}
+
+                {/* Multiple Banners Indicator Dots */}
+                {banners.length > 1 && (
+                  <div className="flex items-center gap-1.5 mt-2">
+                    {banners.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveBannerIdx(idx);
+                        }}
+                        className={`h-1.5 rounded-full transition-all ${
+                          idx === activeBannerIdx ? 'w-5 bg-emerald-400' : 'w-1.5 bg-white/60'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
+          </div>
+        ) : (
+          /* Empty Banner Placeholder: Attractive & 1-Click Setup */
+          <div className="relative aspect-[21/9] sm:aspect-[24/9] w-full overflow-hidden bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 p-4 flex flex-col justify-between text-white">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 backdrop-blur-md">
+                <Layers className="w-3 h-3" />
+                Banner Toko Belum Ada
+              </span>
+              <span className="text-[10px] font-medium text-slate-300">
+                {profile.name || 'Toko Anda'}
+              </span>
+            </div>
 
-            <div className="flex items-center gap-1.5">
-              {/* Tombol Update Banner dari Menu Setting */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2.5">
+              <div>
+                <p className="text-xs sm:text-sm font-extrabold text-white">
+                  Perbagus Beranda dengan Banner Usaha Anda
+                </p>
+                <p className="text-[10px] text-emerald-200 mt-0.5">
+                  Unggah foto produk, etalase toko, atau promo spesial di sini
+                </p>
+              </div>
+
               <button
-                onClick={() => onNavigateTab('settings')}
-                title="Update Banner dari Menu Setting"
-                className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-200 bg-black/50 hover:bg-black/70 border border-white/20 px-2.5 py-1 rounded-full backdrop-blur-md transition active:scale-95 shadow-xs"
+                type="button"
+                onClick={onOpenBannerModal}
+                className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3.5 py-1.5 text-xs font-bold text-white shadow-md active:scale-95 transition shrink-0"
               >
-                <Camera className="w-3 h-3 text-emerald-300" />
-                <span>{activeBanner ? 'Update Banner' : 'Pasang Banner'}</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Pasang Banner Sekarang</span>
               </button>
+            </div>
+          </div>
+        )}
+      </div>
 
-              <span className="hidden sm:inline-block text-[11px] text-slate-300 font-medium bg-white/10 px-2.5 py-0.5 rounded-full backdrop-blur-xs">
+      {/* 2. MAIN BALANCE HERO CARD (Desain Bersih, Elegan & Nyaman di Android) */}
+      <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-850 to-emerald-950 p-5 text-white shadow-lg border border-slate-800">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 backdrop-blur-md">
+              <Wallet className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div>
+              <span className="text-[10px] font-extrabold tracking-wider uppercase text-emerald-400">
+                SALDO KAS SAAT INI
+              </span>
+              <p className="text-[11px] text-slate-300 font-medium">
                 {profile.name || 'Buku Kas Pro'}
-              </span>
-            </div>
-          </div>
-
-          {/* Banner Subtitle / Promo Tagline */}
-          {activeBanner?.subtitle && (
-            <div className="my-1">
-              <span className="inline-block text-[11px] text-emerald-200 font-medium bg-black/40 backdrop-blur-xs px-2.5 py-0.5 rounded-lg border border-white/10 shadow-xs line-clamp-1">
-                ✨ {activeBanner.subtitle}
-              </span>
-            </div>
-          )}
-
-          {/* Big Balance Number */}
-          <div className="my-2">
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight tabular-nums text-white drop-shadow-sm">
-              {formatRupiah(balance)}
-            </h2>
-
-            <div className="flex items-center justify-between mt-1">
-              <p className="text-[11px] text-slate-300 flex items-center gap-1.5 drop-shadow-xs">
-                <span>Status Saldo:</span>
-                <span
-                  className={`font-semibold ${
-                    balance >= 0 ? 'text-emerald-400' : 'text-rose-400'
-                  }`}
-                >
-                  {balance >= 0 ? 'Surplus / Positif' : 'Defisit / Minus'}
-                </span>
               </p>
-
-              {/* Multiple Banners Indicator Dots */}
-              {banners.length > 1 && (
-                <div className="flex items-center gap-1">
-                  {banners.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setActiveBannerIdx(idx)}
-                      className={`h-1.5 rounded-full transition-all ${
-                        idx === activeBannerIdx ? 'w-4 bg-emerald-400' : 'w-1.5 bg-white/40'
-                      }`}
-                    />
-                  ))}
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Quick Action CTA inside Hero */}
-          <div className="mt-3.5 grid grid-cols-2 gap-2.5 pt-3 border-t border-white/15">
-            <button
-              onClick={() => onOpenAddModal('IN')}
-              className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 py-2.5 px-3 text-xs font-bold text-white shadow-sm active:scale-98 transition backdrop-blur-xs"
-            >
-              <ArrowDownLeft className="h-4 w-4" />
-              <span>Kas Masuk</span>
-            </button>
-            <button
-              onClick={() => onOpenAddModal('OUT')}
-              className="flex items-center justify-center gap-2 rounded-xl bg-rose-600/90 hover:bg-rose-500 py-2.5 px-3 text-xs font-bold text-white shadow-sm active:scale-98 transition backdrop-blur-xs"
-            >
-              <ArrowUpRight className="h-4 w-4" />
-              <span>Kas Keluar</span>
-            </button>
-          </div>
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+              balance >= 0
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+            }`}
+          >
+            {balance >= 0 ? 'Surplus / Aman' : 'Defisit / Minus'}
+          </span>
+        </div>
+
+        {/* Big Balance Digits */}
+        <div className="my-3">
+          <h2 className="text-3xl sm:text-4xl font-black tracking-tight tabular-nums text-white">
+            {formatRupiah(balance)}
+          </h2>
+          <p className="text-[10px] text-slate-400 mt-1">
+            Total penerimaan dikurangi seluruh pengeluaran tercatat
+          </p>
+        </div>
+
+        {/* 2 Big Action Buttons on Android (Thumb-friendly) */}
+        <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-white/10">
+          <button
+            onClick={() => onOpenAddModal('IN')}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 py-3 px-3 text-xs sm:text-sm font-bold text-white shadow-md active:scale-95 transition"
+          >
+            <ArrowDownLeft className="h-4 w-4" />
+            <span>+ Kas Masuk</span>
+          </button>
+          <button
+            onClick={() => onOpenAddModal('OUT')}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-rose-600 hover:bg-rose-500 py-3 px-3 text-xs sm:text-sm font-bold text-white shadow-md active:scale-95 transition"
+          >
+            <ArrowUpRight className="h-4 w-4" />
+            <span>- Kas Keluar</span>
+          </button>
         </div>
       </div>
 
