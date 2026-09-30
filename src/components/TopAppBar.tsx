@@ -54,10 +54,10 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
             <h1 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
               {profile.name || 'Buku Kas Pro'}
             </h1>
-            {currentUser && (
+            {authUser && (
               <span className="flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
                 <Cloud className="w-2.5 h-2.5 text-emerald-500" />
-                <span className="hidden sm:inline">Online</span>
+                <span className="hidden sm:inline">{currentUser ? 'Online' : 'Aktif'}</span>
               </span>
             )}
           </div>
@@ -82,15 +82,15 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
         <button
           onClick={onOpenAuth}
           className={`flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-xs font-bold active:scale-95 transition ${
-            currentUser
+            authUser
               ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200'
               : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm'
           }`}
-          title={currentUser ? `Akun: ${authUser?.email || authUser?.phoneNumber || 'Online'}` : 'Masuk / Daftar Akun'}
+          title={authUser ? `Akun: ${authUser?.displayName || authUser?.email || 'Aktif'}` : 'Masuk / Daftar Akun'}
         >
           <UserIcon className="h-3.5 w-3.5" />
           <span className="text-[11px]">
-            {currentUser ? (authUser?.email ? authUser.email.split('@')[0] : 'Akun') : 'Daftar / Masuk'}
+            {authUser ? (authUser.displayName || (authUser.email ? authUser.email.split('@')[0] : 'Akun Saya')) : 'Daftar / Masuk'}
           </span>
         </button>
 

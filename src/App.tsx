@@ -102,7 +102,7 @@ export default function App() {
   const [whatsappSelectedTx, setWhatsappSelectedTx] = useState<Transaction | null>(null);
 
   // Ref to track if user is authenticated to trigger online sync
-  const currentUid = currentUser?.uid;
+  const currentUid = currentUser?.uid || authUser?.uid;
 
   // Realtime Firestore synchronization per account
   useEffect(() => {
@@ -123,31 +123,33 @@ export default function App() {
     setSettings(loadLocalSettings(currentUid));
     setBanners(loadLocalBanners(currentUid));
 
-    // Subscribe to Firestore collections with strict user ID isolation
-    const unsubTx = subscribeUserTransactions(currentUid, (firestoreTxs) => {
-      setTransactions(firestoreTxs);
-    });
+    // Only subscribe to Firestore collections if authenticated with Firebase
+    if (currentUser?.uid) {
+      const unsubTx = subscribeUserTransactions(currentUid, (firestoreTxs) => {
+        setTransactions(firestoreTxs);
+      });
 
-    const unsubCats = subscribeUserCategories(currentUid, (firestoreCats) => {
-      setCategories(firestoreCats);
-    });
+      const unsubCats = subscribeUserCategories(currentUid, (firestoreCats) => {
+        setCategories(firestoreCats);
+      });
 
-    const unsubProfile = subscribeUserProfile(currentUid, (firestoreProfile, firestoreSettings) => {
-      setProfile(firestoreProfile);
-      setSettings(firestoreSettings);
-    });
+      const unsubProfile = subscribeUserProfile(currentUid, (firestoreProfile, firestoreSettings) => {
+        setProfile(firestoreProfile);
+        setSettings(firestoreSettings);
+      });
 
-    const unsubBanners = subscribeUserBanners(currentUid, (firestoreBanners) => {
-      setBanners(firestoreBanners);
-    });
+      const unsubBanners = subscribeUserBanners(currentUid, (firestoreBanners) => {
+        setBanners(firestoreBanners);
+      });
 
-    return () => {
-      unsubTx();
-      unsubCats();
-      unsubProfile();
-      unsubBanners();
-    };
-  }, [currentUid]);
+      return () => {
+        unsubTx();
+        unsubCats();
+        unsubProfile();
+        unsubBanners();
+      };
+    }
+  }, [currentUid, currentUser?.uid]);
 
   // Sync dark mode class with root html element
   const isDark =
