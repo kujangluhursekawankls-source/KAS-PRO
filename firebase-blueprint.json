@@ -1,0 +1,101 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User business profile, settings, and metadata",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "phoneNumber": { "type": "string", "maxLength": 32 },
+        "businessName": { "type": "string", "maxLength": 128 },
+        "businessOwner": { "type": "string", "maxLength": 128 },
+        "businessAddress": { "type": "string", "maxLength": 256 },
+        "businessPhone": { "type": "string", "maxLength": 32 },
+        "businessWhatsapp": { "type": "string", "maxLength": 32 },
+        "businessEmail": { "type": "string", "maxLength": 128 },
+        "businessNotes": { "type": "string", "maxLength": 500 },
+        "businessLogo": { "type": "string", "maxLength": 500000 },
+        "theme": { "type": "string", "maxLength": 16 },
+        "currency": { "type": "string", "maxLength": 8 },
+        "enablePin": { "type": "boolean" },
+        "pinCode": { "type": "string", "maxLength": 8 },
+        "warnNegativeBalance": { "type": "boolean" },
+        "confirmDelete": { "type": "boolean" },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["uid"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Income and expense transactions of the user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "transactionNumber": { "type": "string", "maxLength": 64 },
+        "type": { "type": "string", "enum": ["IN", "OUT"] },
+        "date": { "type": "string", "maxLength": 16 },
+        "time": { "type": "string", "maxLength": 16 },
+        "category": { "type": "string", "maxLength": 64 },
+        "sourceOrTarget": { "type": "string", "maxLength": 128 },
+        "amount": { "type": "number" },
+        "description": { "type": "string", "maxLength": 1000 },
+        "receiptImage": { "type": "string", "maxLength": 500000 },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "transactionNumber", "type", "date", "category", "amount"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Custom or default category for cash flow classification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 64 },
+        "type": { "type": "string", "enum": ["IN", "OUT"] },
+        "color": { "type": "string", "maxLength": 32 },
+        "isDefault": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "name", "type"]
+    },
+    "Banner": {
+      "title": "Banner",
+      "description": "Promotional or business banner displayed in the app",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "subtitle": { "type": "string", "maxLength": 256 },
+        "imageUrl": { "type": "string", "maxLength": 500000 },
+        "linkUrl": { "type": "string", "maxLength": 500 },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "userId", "imageUrl"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "UserProfile" },
+      "description": "User profile, company branding, and user settings"
+    },
+    "/users/{userId}/transactions/{transactionId}": {
+      "schema": { "$ref": "Transaction" },
+      "description": "User cash in and cash out transactions"
+    },
+    "/users/{userId}/categories/{categoryId}": {
+      "schema": { "$ref": "Category" },
+      "description": "User cash flow categories"
+    },
+    "/users/{userId}/banners/{bannerId}": {
+      "schema": { "$ref": "Banner" },
+      "description": "User homepage promotional banners"
+    }
+  }
+}

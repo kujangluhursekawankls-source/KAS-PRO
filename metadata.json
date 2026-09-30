@@ -1,0 +1,8 @@
+{
+  "name": "Buku Kas Pro",
+  "description": "Aplikasi pencatatan keuangan sederhana dan profesional untuk UMKM, toko, warung, masjid, RT/RW, dan komunitas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
