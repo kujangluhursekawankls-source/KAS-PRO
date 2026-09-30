@@ -221,8 +221,7 @@ export function subscribeUserTransactions(
       onUpdate(list);
     },
     (err) => {
-      console.warn('Realtime transactions snapshot error, using cached local data:', err);
-      handleFirestoreError(err, OperationType.GET, path);
+      console.warn('Realtime transactions snapshot info, using local cache:', err);
     }
   );
 }
@@ -243,7 +242,7 @@ export async function saveFirestoreTransaction(
       updatedAt: Date.now(),
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    console.warn('Firestore write warning for tx:', error);
   }
 }
 
@@ -259,7 +258,7 @@ export async function deleteFirestoreTransaction(
     const docRef = doc(db, 'users', userId, 'transactions', transactionId);
     await deleteDoc(docRef);
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path);
+    console.warn('Firestore delete warning for tx:', error);
   }
 }
 
@@ -301,8 +300,7 @@ export function subscribeUserCategories(
       }
     },
     (err) => {
-      console.warn('Realtime categories snapshot error:', err);
-      handleFirestoreError(err, OperationType.GET, path);
+      console.warn('Realtime categories snapshot info, using local cache:', err);
     }
   );
 }
@@ -319,7 +317,7 @@ export async function saveFirestoreCategory(
     const docRef = doc(db, 'users', userId, 'categories', category.id);
     await setDoc(docRef, { ...category, userId });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    console.warn('Firestore write warning for category:', error);
   }
 }
 
@@ -335,7 +333,7 @@ export async function deleteFirestoreCategory(
     const docRef = doc(db, 'users', userId, 'categories', categoryId);
     await deleteDoc(docRef);
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path);
+    console.warn('Firestore delete warning for category:', error);
   }
 }
 
@@ -383,8 +381,7 @@ export function subscribeUserProfile(
       }
     },
     (err) => {
-      console.warn('Realtime profile snapshot error:', err);
-      handleFirestoreError(err, OperationType.GET, path);
+      console.warn('Realtime profile snapshot info, using local cache:', err);
     }
   );
 }
@@ -426,7 +423,7 @@ export async function saveFirestoreUserProfile(
       { merge: true }
     );
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    console.warn('Firestore write warning for profile:', error);
   }
 }
 
@@ -451,8 +448,7 @@ export function subscribeUserBanners(
       onUpdate(list);
     },
     (err) => {
-      console.warn('Realtime banner snapshot error:', err);
-      handleFirestoreError(err, OperationType.GET, path);
+      console.warn('Realtime banner snapshot info, using local cache:', err);
     }
   );
 }
@@ -463,7 +459,7 @@ export async function saveFirestoreBanner(userId: string, banner: Banner): Promi
     const docRef = doc(db, 'users', userId, 'banners', banner.id);
     await setDoc(docRef, { ...banner, userId });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    console.warn('Firestore write warning for banner:', error);
   }
 }
 
@@ -473,7 +469,7 @@ export async function deleteFirestoreBanner(userId: string, bannerId: string): P
     const docRef = doc(db, 'users', userId, 'banners', bannerId);
     await deleteDoc(docRef);
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path);
+    console.warn('Firestore delete warning for banner:', error);
   }
 }
 

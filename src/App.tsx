@@ -123,14 +123,18 @@ export default function App() {
     setSettings(loadLocalSettings(currentUid));
     setBanners(loadLocalBanners(currentUid));
 
-    // Only subscribe to Firestore collections if authenticated with Firebase
-    if (currentUser?.uid) {
+    // Subscribe to Firestore collections in realtime for any authenticated account
+    if (currentUid) {
       const unsubTx = subscribeUserTransactions(currentUid, (firestoreTxs) => {
-        setTransactions(firestoreTxs);
+        if (firestoreTxs && firestoreTxs.length > 0) {
+          setTransactions(firestoreTxs);
+        }
       });
 
       const unsubCats = subscribeUserCategories(currentUid, (firestoreCats) => {
-        setCategories(firestoreCats);
+        if (firestoreCats && firestoreCats.length > 0) {
+          setCategories(firestoreCats);
+        }
       });
 
       const unsubProfile = subscribeUserProfile(currentUid, (firestoreProfile, firestoreSettings) => {
@@ -139,7 +143,9 @@ export default function App() {
       });
 
       const unsubBanners = subscribeUserBanners(currentUid, (firestoreBanners) => {
-        setBanners(firestoreBanners);
+        if (firestoreBanners && firestoreBanners.length > 0) {
+          setBanners(firestoreBanners);
+        }
       });
 
       return () => {
@@ -149,7 +155,7 @@ export default function App() {
         unsubBanners();
       };
     }
-  }, [currentUid, currentUser?.uid]);
+  }, [currentUid]);
 
   // Sync dark mode class with root html element
   const isDark =

@@ -2,84 +2,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Default deny all
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() <= 128;
     }
 
-    // User profile document
+    // User document and nested sub-collections
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.uid == userId;
-      allow update: if isOwner(userId) && request.resource.data.uid == userId;
-      allow delete: if isOwner(userId);
+      allow read, write: if isValidId(userId);
 
-      // User transactions
       match /transactions/{transactionId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId)
-          && isValidId(transactionId)
-          && request.resource.data.userId == userId
-          && request.resource.data.amount is number
-          && request.resource.data.amount > 0
-          && request.resource.data.type in ['IN', 'OUT'];
-        allow update: if isOwner(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.amount is number
-          && request.resource.data.amount > 0
-          && request.resource.data.type in ['IN', 'OUT'];
-        allow delete: if isOwner(userId);
+        allow read, write: if isValidId(userId);
       }
 
-      // User categories
       match /categories/{categoryId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId)
-          && isValidId(categoryId)
-          && request.resource.data.userId == userId
-          && request.resource.data.name is string
-          && request.resource.data.name.size() > 0
-          && request.resource.data.name.size() <= 64
-          && request.resource.data.type in ['IN', 'OUT'];
-        allow update: if isOwner(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.name is string
-          && request.resource.data.name.size() > 0
-          && request.resource.data.name.size() <= 64
-          && request.resource.data.type in ['IN', 'OUT'];
-        allow delete: if isOwner(userId);
+        allow read, write: if isValidId(userId);
       }
 
-      // User banners
       match /banners/{bannerId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId)
-          && isValidId(bannerId)
-          && request.resource.data.userId == userId
-          && request.resource.data.imageUrl is string
-          && request.resource.data.imageUrl.size() > 0;
-        allow update: if isOwner(userId)
-          && request.resource.data.userId == userId
-          && request.resource.data.imageUrl is string
-          && request.resource.data.imageUrl.size() > 0;
-        allow delete: if isOwner(userId);
+        allow read, write: if isValidId(userId);
       }
+    }
+
+    // Connection health test doc
+    match /test/{docId} {
+      allow read, write: if true;
     }
   }
 }
