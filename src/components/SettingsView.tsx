@@ -12,6 +12,7 @@ import {
   uploadImageToStorage,
   saveFirestoreBanner,
   deleteFirestoreBanner,
+  saveLocalBanners,
 } from '../utils/storage';
 import { exportTransactionsExcel } from '../utils/excelExport';
 import { useAuth } from '../context/AuthContext';
@@ -45,6 +46,7 @@ import {
   Sparkles,
   ExternalLink,
   Image as ImageIcon,
+  Users,
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -56,6 +58,7 @@ interface SettingsViewProps {
   isDark: boolean;
   onUpdateProfile: (newProfile: BusinessProfile) => void;
   onUpdateSettings: (newSettings: AppSettings) => void;
+  onUpdateBanners?: (newBanners: Banner[]) => void;
   onOpenCategoriesModal: () => void;
   onOpenGuide: () => void;
   onOpenApkGuide: () => void;
@@ -75,6 +78,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   isDark,
   onUpdateProfile,
   onUpdateSettings,
+  onUpdateBanners,
   onOpenCategoriesModal,
   onOpenGuide,
   onOpenApkGuide,
@@ -159,7 +163,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       return;
     }
 
-    const uid = currentUser?.uid || 'guest';
+    const uid = currentUser?.uid || authUser?.uid || 'guest';
     setIsUploadingBanner(true);
     try {
       const imageUrl = await uploadImageToStorage(uid, bannerPreviewImage, 'banners');
@@ -175,9 +179,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         createdAt: Date.now(),
       };
 
-      await saveFirestoreBanner(uid, newBanner);
+      const updated = [newBanner, ...banners];
+      saveLocalBanners(updated, uid);
+      if (onUpdateBanners) onUpdateBanners(updated);
+
+      if (uid !== 'guest') {
+        await saveFirestoreBanner(uid, newBanner);
+      }
+
       toast.success(
-        'Banner berhasil disimpan ke Firebase & langsung aktif di kartu Saldo Beranda!',
+        'Banner berhasil disimpan & langsung aktif di Beranda!',
         'Banner Berhasil Diperbarui'
       );
       setBannerTitle('');
@@ -193,10 +204,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleDeleteBanner = async (bannerId: string) => {
-    const uid = currentUser?.uid || 'guest';
+    const uid = currentUser?.uid || authUser?.uid || 'guest';
     setIsDeletingBannerId(bannerId);
     try {
-      await deleteFirestoreBanner(uid, bannerId);
+      const updated = banners.filter((b) => b.id !== bannerId);
+      saveLocalBanners(updated, uid);
+      if (onUpdateBanners) onUpdateBanners(updated);
+
+      if (uid !== 'guest') {
+        await deleteFirestoreBanner(uid, bannerId);
+      }
       toast.success('Banner berhasil dihapus dari database.', 'Banner Dihapus');
     } catch (err: any) {
       console.error(err);
@@ -204,6 +221,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     } finally {
       setIsDeletingBannerId(null);
     }
+  };
+
+  const handleUseLogoAsBanner = async () => {
+    if (!profile.logo) {
+      toast.warning('Unggah foto logo/usaha terlebih dahulu.');
+      return;
+    }
+    const uid = currentUser?.uid || authUser?.uid || 'guest';
+    const newBanner: Banner = {
+      id: `banner-${Date.now()}`,
+      userId: uid,
+      imageUrl: profile.logo,
+      title: profile.name || 'Kopi Susu Jahe',
+      subtitle: profile.notes || 'Catat Keuangan Lebih Mudah',
+      isActive: true,
+      createdAt: Date.now(),
+    };
+    const updated = [newBanner, ...banners.filter((b) => b.imageUrl !== profile.logo)];
+    saveLocalBanners(updated, uid);
+    if (onUpdateBanners) onUpdateBanners(updated);
+
+    if (uid !== 'guest') {
+      await saveFirestoreBanner(uid, newBanner);
+    }
+    toast.success('Foto toko Anda berhasil dipasang sebagai Banner Beranda!', 'Banner Aktif');
   };
 
   const scrollToBannerSection = () => {
@@ -370,48 +412,67 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Akun Online Firebase
+                Akun Pembukuan Online
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                {currentUser
+                {(authUser || currentUser)
                   ? 'Sinkronisasi Cloud Firestore realtime aktif'
                   : 'Masuk untuk sinkronisasi data antar perangkat'}
               </p>
             </div>
           </div>
-          {currentUser && (
-            <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Tersambung
+          {(authUser || currentUser) && (
+            <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Online (Cloud Sync)
             </span>
           )}
         </div>
 
         <div className="pt-3">
-          {currentUser ? (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold">
-                  {authUser?.email ? authUser.email[0].toUpperCase() : 'U'}
+          {(authUser || currentUser) ? (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-50/60 dark:bg-emerald-950/30 p-3.5 rounded-2xl border border-emerald-200 dark:border-emerald-800/80">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white font-black text-base shadow-sm">
+                  {((authUser?.displayName || authUser?.email || 'U')[0]).toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-bold text-slate-900 dark:text-white text-xs">
-                    {authUser?.displayName || authUser?.email || authUser?.phoneNumber || 'Pengguna Terdaftar'}
+                  <div className="flex items-center gap-2">
+                    <p className="font-extrabold text-slate-900 dark:text-white text-sm">
+                      {authUser?.displayName || (authUser?.email ? authUser.email.split('@')[0] : 'Pengguna Terdaftar')}
+                    </p>
+                    <span className="rounded-md bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold text-white uppercase tracking-wider">
+                      Aktif
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 font-mono mt-0.5">
+                    {authUser?.email || authUser?.phoneNumber || 'Akun Online Terverifikasi'}
                   </p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                    UID: {currentUser.uid.slice(0, 16)}...
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                    ID Pengguna: {(authUser?.uid || currentUser?.uid || '').slice(0, 18)}...
                   </p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-400 transition"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Keluar Akun</span>
-              </button>
+              {/* Action Buttons: Switch & Explicit LOGOUT */}
+              <div className="flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-emerald-200/50">
+                <button
+                  type="button"
+                  onClick={onOpenAuth}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition"
+                >
+                  <Users className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Ganti Akun</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-rose-500 active:scale-95 shadow-xs transition"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Keluar Akun (Log Out)</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-2xl border border-emerald-200/70 dark:border-emerald-800/50">
@@ -658,6 +719,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             {banners.length} Banner
           </span>
         </div>
+
+        {/* Quick action: Gunakan Foto Logo/Profil Usaha sebagai Banner */}
+        {profile.logo && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-purple-200 bg-purple-50/70 p-3.5 dark:border-purple-900/50 dark:bg-purple-950/30">
+            <div className="flex items-center gap-3 min-w-0">
+              <img
+                src={profile.logo}
+                alt="Logo Toko"
+                className="h-11 w-11 rounded-xl object-cover border border-purple-200 shadow-xs shrink-0"
+              />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-purple-950 dark:text-purple-200 truncate">
+                  Pasang Foto Profil Toko Sebagai Banner Beranda
+                </p>
+                <p className="text-[10px] text-purple-700 dark:text-purple-300 line-clamp-1">
+                  Gunakan foto "{profile.name || 'Kopi Susu Jahe'}" langsung menjadi banner Beranda (1-Klik)
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleUseLogoAsBanner}
+              className="shrink-0 flex items-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-purple-500 active:scale-95 transition shadow-xs"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Gunakan Foto Ini</span>
+            </button>
+          </div>
+        )}
 
         {/* Upload & Form Section */}
         <form onSubmit={handleSaveNewBanner} className="space-y-3.5">

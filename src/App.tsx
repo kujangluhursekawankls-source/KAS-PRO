@@ -117,11 +117,50 @@ export default function App() {
     }
 
     // Immediately load local cached data for this user ID (offline-first & fast startup)
-    setTransactions(loadLocalTransactions(currentUid));
-    setCategories(loadLocalCategories(currentUid));
-    setProfile(loadLocalBusinessProfile(currentUid));
-    setSettings(loadLocalSettings(currentUid));
-    setBanners(loadLocalBanners(currentUid));
+    const userTxs = loadLocalTransactions(currentUid);
+    const userCats = loadLocalCategories(currentUid);
+    let userProfile = loadLocalBusinessProfile(currentUid);
+    const userSettings = loadLocalSettings(currentUid);
+    let userBanners = loadLocalBanners(currentUid);
+
+    // If this account hasn't saved its profile yet, seamlessly inherit previously saved profile data
+    if (!userProfile.owner && !userProfile.address) {
+      const guestProfile = loadLocalBusinessProfile();
+      if (guestProfile.owner || guestProfile.logo || (guestProfile.name && guestProfile.name !== 'Buku Kas Pro')) {
+        userProfile = { ...guestProfile };
+        saveLocalBusinessProfile(userProfile, currentUid);
+        saveFirestoreUserProfile(currentUid, userProfile, userSettings);
+      }
+    }
+
+    // If this account has no banners yet, check previously uploaded banners or auto-set from profile photo
+    if (userBanners.length === 0) {
+      const guestBanners = loadLocalBanners();
+      if (guestBanners.length > 0) {
+        userBanners = [...guestBanners];
+        saveLocalBanners(userBanners, currentUid);
+        guestBanners.forEach((b) => saveFirestoreBanner(currentUid, b));
+      } else if (userProfile.logo) {
+        const autoBanner: Banner = {
+          id: `banner-auto-${Date.now()}`,
+          userId: currentUid,
+          imageUrl: userProfile.logo,
+          title: userProfile.name || 'Kopi Susu Jahe',
+          subtitle: userProfile.notes || 'Catat Keuangan Lebih Mudah',
+          isActive: true,
+          createdAt: Date.now(),
+        };
+        userBanners = [autoBanner];
+        saveLocalBanners(userBanners, currentUid);
+        saveFirestoreBanner(currentUid, autoBanner);
+      }
+    }
+
+    setTransactions(userTxs);
+    setCategories(userCats);
+    setProfile(userProfile);
+    setSettings(userSettings);
+    setBanners(userBanners);
 
     // Subscribe to Firestore collections in realtime for any authenticated account
     if (currentUid) {
@@ -426,6 +465,7 @@ export default function App() {
               isDark={isDark}
               onUpdateProfile={handleUpdateProfile}
               onUpdateSettings={handleUpdateSettings}
+              onUpdateBanners={setBanners}
               onOpenCategoriesModal={() => setCategoriesModalOpen(true)}
               onOpenGuide={() => setGuideModalOpen(true)}
               onOpenApkGuide={() => setApkGuideModalOpen(true)}

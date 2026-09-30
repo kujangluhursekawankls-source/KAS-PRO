@@ -1,6 +1,7 @@
 import React from 'react';
 import { BusinessProfile } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import {
   HelpCircle,
   Smartphone,
@@ -8,7 +9,6 @@ import {
   Sun,
   MessageSquare,
   Cloud,
-  CloudCheck,
   User as UserIcon,
   LogOut,
 } from 'lucide-react';
@@ -32,7 +32,20 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
   onOpenAuth,
   onOpenWhatsAppModal,
 }) => {
-  const { authUser, currentUser } = useAuth();
+  const { authUser, currentUser, logout } = useAuth();
+  const toast = useToast();
+
+  const handleQuickLogout = async () => {
+    const name = authUser?.displayName || authUser?.email || 'akun ini';
+    if (window.confirm(`Yakin ingin keluar dari akun "${name}"? Data kas Anda tetap aman tersimpan di cloud.`)) {
+      try {
+        await logout();
+        toast.info('Anda telah keluar dari akun.', 'Logout Berhasil');
+      } catch (err: any) {
+        toast.error('Gagal keluar akun: ' + err.message);
+      }
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200/80 bg-white/95 px-3.5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 transition-colors">
@@ -82,17 +95,31 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
         <button
           onClick={onOpenAuth}
           className={`flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-xs font-bold active:scale-95 transition ${
-            authUser
+            (authUser || currentUser)
               ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200'
               : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm'
           }`}
-          title={authUser ? `Akun: ${authUser?.displayName || authUser?.email || 'Aktif'}` : 'Masuk / Daftar Akun'}
+          title={(authUser || currentUser) ? `Akun: ${authUser?.displayName || authUser?.email || 'Aktif'}` : 'Masuk / Daftar Akun'}
         >
-          <UserIcon className="h-3.5 w-3.5" />
-          <span className="text-[11px]">
-            {authUser ? (authUser.displayName || (authUser.email ? authUser.email.split('@')[0] : 'Akun Saya')) : 'Daftar / Masuk'}
+          <UserIcon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+          <span className="text-[11px] max-w-[85px] sm:max-w-[120px] truncate">
+            {(authUser || currentUser)
+              ? (authUser?.displayName || (authUser?.email ? authUser.email.split('@')[0] : 'Akun'))
+              : 'Daftar / Masuk'}
           </span>
         </button>
+
+        {/* Explicit Logout Button right on Top App Bar */}
+        {(authUser || currentUser) && (
+          <button
+            onClick={handleQuickLogout}
+            className="flex h-8 items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2 text-xs font-bold text-rose-600 hover:bg-rose-100 hover:text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-400 active:scale-95 transition"
+            title="Keluar dari Akun (Logout)"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="text-[10px] hidden xs:inline">Keluar</span>
+          </button>
+        )}
 
         {/* Dark/Light mode */}
         <button
