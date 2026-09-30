@@ -81,16 +81,16 @@ export const TopAppBar: React.FC<TopAppBarProps> = ({
         {/* User Account Button */}
         <button
           onClick={onOpenAuth}
-          className={`flex h-8 items-center gap-1.5 rounded-xl px-2 text-xs font-semibold active:scale-95 transition ${
+          className={`flex h-8 items-center gap-1.5 rounded-xl px-2.5 text-xs font-bold active:scale-95 transition ${
             currentUser
               ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200'
-              : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-xs'
+              : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm'
           }`}
           title={currentUser ? `Akun: ${authUser?.email || authUser?.phoneNumber || 'Online'}` : 'Masuk / Daftar Akun'}
         >
           <UserIcon className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">
-            {currentUser ? (authUser?.email ? authUser.email.split('@')[0] : 'Akun') : 'Masuk'}
+          <span className="text-[11px]">
+            {currentUser ? (authUser?.email ? authUser.email.split('@')[0] : 'Akun') : 'Daftar / Masuk'}
           </span>
         </button>
 

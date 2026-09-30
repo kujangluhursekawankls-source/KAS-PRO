@@ -27,7 +27,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onClose,
   initialMode = 'login',
 }) => {
-  const { loginWithEmail, registerWithEmail, loginWithGoogle, sendPasswordReset, sendPhoneOtp } = useAuth();
+  const { loginWithEmail, registerWithEmail, loginWithGoogle, loginAnonymously, sendPasswordReset, sendPhoneOtp } = useAuth();
   const toast = useToast();
 
   const [mode, setMode] = useState<'login' | 'register' | 'phone' | 'forgot'>(initialMode);
@@ -113,10 +113,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     } catch (err: any) {
       console.error(err);
       if (err.code === 'auth/email-already-in-use') {
-        toast.error('Email ini sudah terdaftar. Silakan login langsung.');
+        toast.error('Email ini sudah terdaftar. Silakan beralih ke menu Masuk.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        toast.error('Pendaftaran Email belum diaktifkan di Firebase Console. Gunakan opsi Masuk Cepat Instan.');
+      } else if (err.code === 'auth/weak-password') {
+        toast.error('Kata sandi terlalu pendek. Minimal 6 karakter.');
+      } else if (err.code === 'auth/invalid-email') {
+        toast.error('Format alamat email tidak valid.');
       } else {
         toast.error(err.message || 'Gagal membuat akun.');
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle Quick / Instant Account (1-Click without password)
+  const handleQuickLogin = async () => {
+    setIsLoading(true);
+    try {
+      await loginAnonymously();
+      toast.success('Akun online instan berhasil dibuat! Data tersinkronisasi realtime.', 'Akun Terhubung');
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Gagal membuat akun instan: ' + (err.message || 'Periksa koneksi'));
     } finally {
       setIsLoading(false);
     }
@@ -561,6 +582,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <Smartphone className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>Masuk dengan Nomor HP (SMS)</span>
             </button>
+
+            {/* 1-Click Fast Instant Account */}
+            <div className="pt-2 border-t border-dashed border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={handleQuickLogin}
+                disabled={isLoading}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 py-2.5 px-3 text-xs font-bold text-white shadow-sm active:scale-98 transition"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-200" />
+                <span>Masuk Cepat / Buat Akun Instan (1-Klik)</span>
+              </button>
+              <p className="text-[10px] text-center text-slate-400 mt-1">
+                Langsung aktif dengan database cloud tanpa perlu verifikasi email/SMS.
+              </p>
+            </div>
           </div>
         )}
       </div>

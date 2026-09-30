@@ -8,6 +8,7 @@ import {
   sendPasswordResetEmail,
   signInWithPopup,
   signInWithPhoneNumber,
+  signInAnonymously,
   RecaptchaVerifier,
   ConfirmationResult,
 } from 'firebase/auth';
@@ -21,6 +22,7 @@ interface AuthContextType {
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   registerWithEmail: (email: string, pass: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  loginAnonymously: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   sendPhoneOtp: (phoneNumber: string, appVerifier: RecaptchaVerifier) => Promise<ConfirmationResult>;
   logout: () => Promise<void>;
@@ -51,6 +53,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async () => {
     await signInWithPopup(auth, googleProvider);
+  };
+
+  const loginAnonymously = async () => {
+    await signInAnonymously(auth);
   };
 
   const sendPasswordReset = async (email: string) => {
@@ -84,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithEmail,
         registerWithEmail,
         loginWithGoogle,
+        loginAnonymously,
         sendPasswordReset,
         sendPhoneOtp,
         logout,
